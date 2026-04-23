@@ -333,6 +333,12 @@ function AdminPanel() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
+  const normalizeRows = (rows) =>
+    (rows || []).map((r) => ({
+      ...r,
+      attending: r.attending?.toString().trim().toLowerCase(),
+    }));
+
   const fetchRSVPs = async () => {
     setLoading(true);
     setError("");
@@ -340,7 +346,7 @@ function AdminPanel() {
       const res = await fetch(`${config.googleScriptUrl}?action=get`, { redirect: "follow" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setRsvps(data.rows || []);
+      setRsvps(normalizeRows(data.rows));
     } catch (e) {
       setError(
         `Could not load RSVPs (${e.message}). Make sure your Google Apps Script is deployed as "Anyone, even anonymous" and the URL in config.js is correct.`,
@@ -357,7 +363,7 @@ function AdminPanel() {
         return res.json();
       })
       .then((data) => {
-        setRsvps(data.rows || []);
+        setRsvps(normalizeRows(data.rows));
         setLoading(false);
       })
       .catch((e) => {
@@ -368,10 +374,14 @@ function AdminPanel() {
       });
   }, [hasUrl]);
 
-  const attending = (r) => r.attending?.toLowerCase() === "yes";
+  const isAttending = (r) => r.attending?.toLowerCase() === "yes";
+  const isDeclined = (r) => r.attending?.toLowerCase() === "no";
 
   const filtered = rsvps.filter((r) => {
-    const matchFilter = filter === "all" || (filter === "yes" ? attending(r) : !attending(r));
+    const matchFilter =
+      filter === "all" ||
+      (filter === "yes" && isAttending(r)) ||
+      (filter === "no" && isDeclined(r));
     const matchSearch =
       !search ||
       r.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -379,8 +389,8 @@ function AdminPanel() {
     return matchFilter && matchSearch;
   });
 
-  const attendingList = rsvps.filter(attending);
-  const declined = rsvps.filter((r) => !attending(r));
+  const attendingList = rsvps.filter(isAttending);
+  const declined = rsvps.filter(isDeclined);
   const totalGuests = attendingList.reduce(
     (sum, r) => sum + parseInt(r.additional_guests || 0, 10) + 1,
     0,
@@ -392,7 +402,7 @@ function AdminPanel() {
         Name: r.name,
         Email: r.email,
         Phone: r.phone,
-        Attending: attending(r) ? "Yes" : "No",
+        Attending: isAttending(r) ? "Yes" : "No",
         "Additional Guests": r.additional_guests,
         "Dietary Requirements": r.dietary_requirements,
         Message: r.message,
@@ -498,15 +508,15 @@ function AdminPanel() {
                     <td className="name-cell">{r.name}</td>
                     <td>
                       <span
-                        className={`badge ${attending(r) ? "badge-success" : "badge-danger"}`}
+                        className={`badge ${isAttending(r) ? "badge-success" : "badge-danger"}`}
                       >
-                        {attending(r) ? "Attending" : "Declined"}
+                        {isAttending(r) ? "Attending" : "Declined"}
                       </span>
                     </td>
                     <td>{r.email}</td>
                     <td>{r.phone || "—"}</td>
                     <td>
-                      {attending(r)
+                      {isAttending(r)
                         ? parseInt(r.additional_guests || 0) + 1
                         : "—"}
                     </td>
@@ -554,7 +564,7 @@ export default function App() {
         await fetch(config.googleScriptUrl, {
           method: "POST",
           mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "text/plain" },
           body: JSON.stringify({
             action: "add",
             ...form,

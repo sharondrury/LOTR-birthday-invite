@@ -368,8 +368,10 @@ function AdminPanel() {
       });
   }, [hasUrl]);
 
+  const attending = (r) => r.attending?.toLowerCase() === "yes";
+
   const filtered = rsvps.filter((r) => {
-    const matchFilter = filter === "all" || r.attending === filter;
+    const matchFilter = filter === "all" || (filter === "yes" ? attending(r) : !attending(r));
     const matchSearch =
       !search ||
       r.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -377,10 +379,10 @@ function AdminPanel() {
     return matchFilter && matchSearch;
   });
 
-  const attending = rsvps.filter((r) => r.attending === "yes");
-  const declined = rsvps.filter((r) => r.attending === "no");
-  const totalGuests = attending.reduce(
-    (sum, r) => sum + parseInt(r.guests || 0, 10) + 1,
+  const attendingList = rsvps.filter(attending);
+  const declined = rsvps.filter((r) => !attending(r));
+  const totalGuests = attendingList.reduce(
+    (sum, r) => sum + parseInt(r.additional_guests || 0, 10) + 1,
     0,
   );
 
@@ -390,9 +392,9 @@ function AdminPanel() {
         Name: r.name,
         Email: r.email,
         Phone: r.phone,
-        Attending: r.attending === "yes" ? "Yes" : "No",
-        "Additional Guests": r.guests,
-        "Dietary Requirements": r.dietary,
+        Attending: attending(r) ? "Yes" : "No",
+        "Additional Guests": r.additional_guests,
+        "Dietary Requirements": r.dietary_requirements,
         Message: r.message,
         "Submitted At": r.timestamp,
       })),
@@ -421,7 +423,7 @@ function AdminPanel() {
             <span className="stat-label">Total Responses</span>
           </div>
           <div className="stat-card success">
-            <span className="stat-num">{attending.length}</span>
+            <span className="stat-num">{attendingList.length}</span>
             <span className="stat-label">Attending</span>
           </div>
           <div className="stat-card danger">
@@ -496,19 +498,19 @@ function AdminPanel() {
                     <td className="name-cell">{r.name}</td>
                     <td>
                       <span
-                        className={`badge ${r.attending === "yes" ? "badge-success" : "badge-danger"}`}
+                        className={`badge ${attending(r) ? "badge-success" : "badge-danger"}`}
                       >
-                        {r.attending === "yes" ? "Attending" : "Declined"}
+                        {attending(r) ? "Attending" : "Declined"}
                       </span>
                     </td>
                     <td>{r.email}</td>
                     <td>{r.phone || "—"}</td>
                     <td>
-                      {r.attending === "yes"
-                        ? parseInt(r.guests || 0) + 1
+                      {attending(r)
+                        ? parseInt(r.additional_guests || 0) + 1
                         : "—"}
                     </td>
-                    <td>{r.dietary || "—"}</td>
+                    <td>{r.dietary_requirements || "—"}</td>
                     <td className="message-cell">{r.message || "—"}</td>
                     <td className="date-cell">
                       {r.timestamp

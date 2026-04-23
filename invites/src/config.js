@@ -26,7 +26,7 @@ const config = {
   // STEP 3: Paste the code from google-apps-script.js into the editor
   // STEP 4: Deploy as Web App (Anyone can access), copy the URL below
   googleScriptUrl:
-    "https://script.google.com/macros/s/AKfycbyY362e00qK8iIZTwM-a1cTE7Cz37uszV3vsVs1VtlfiFo8WnOe9sCDNHOgmZbi-itsJw/exec",
+    "https://script.google.com/macros/s/AKfycbwWVJkfR0X9YdNWmSi4DD27b3lscWY1mZuoQyKL_d3dw-nnHItBFXKs55ySo9wykdWrww/exec",
 
   // ----- Optional: Custom message on the invite -----
   inviteMessage:

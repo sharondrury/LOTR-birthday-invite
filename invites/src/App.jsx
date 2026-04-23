@@ -325,30 +325,48 @@ function ThankYouScreen({ attending }) {
 
 // ─── Admin Panel ──────────────────────────────────────────────
 function AdminPanel() {
+  const hasUrl = !!(config.googleScriptUrl && config.googleScriptUrl !== "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE");
+
   const [rsvps, setRsvps] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(hasUrl);
+  const [error, setError] = useState(hasUrl ? "" : "No Google Script URL set in config.js");
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    fetchRSVPs();
-  }, []);
-
   const fetchRSVPs = async () => {
     setLoading(true);
+    setError("");
     try {
-      const url = `${config.googleScriptUrl}?action=get`;
-      const res = await fetch(url);
+      const res = await fetch(`${config.googleScriptUrl}?action=get`, { redirect: "follow" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setRsvps(data.rows || []);
     } catch (e) {
       setError(
-        "Could not load RSVPs. Check your Google Script URL in config.js",
+        `Could not load RSVPs (${e.message}). Make sure your Google Apps Script is deployed as "Anyone, even anonymous" and the URL in config.js is correct.`,
       );
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (!hasUrl) return;
+    fetch(`${config.googleScriptUrl}?action=get`, { redirect: "follow" })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        setRsvps(data.rows || []);
+        setLoading(false);
+      })
+      .catch((e) => {
+        setError(
+          `Could not load RSVPs (${e.message}). Make sure your Google Apps Script is deployed as "Anyone, even anonymous" and the URL in config.js is correct.`,
+        );
+        setLoading(false);
+      });
+  }, [hasUrl]);
 
   const filtered = rsvps.filter((r) => {
     const matchFilter = filter === "all" || r.attending === filter;
